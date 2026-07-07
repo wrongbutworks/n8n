@@ -145,6 +145,7 @@ post:
               - package
               - workflows
               - folders
+              - projects
               - bindings
               - credentials
             properties:
@@ -280,6 +281,33 @@ post:
                         - updated
                         - skipped
                       description: Import outcome for this package folder.
+              projects:
+                type: array
+                description: >
+                  Project shells created or matched-and-updated. Present for project
+                  packages; empty when importing loose workflows/folders.
+                items:
+                  type: object
+                  required:
+                    - sourceProjectId
+                    - localId
+                    - name
+                    - status
+                  properties:
+                    sourceProjectId:
+                      type: string
+                      description: Project id as it appeared in the package.
+                    localId:
+                      type: string
+                      description: Project id on the target instance (equal to `sourceProjectId`; project ids are reused).
+                    name:
+                      type: string
+                    status:
+                      type: string
+                      enum:
+                        - created
+                        - updated
+                      description: Import outcome for this package project.
               credentials:
                 type: object
                 description: >

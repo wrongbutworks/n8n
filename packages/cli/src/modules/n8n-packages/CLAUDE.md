@@ -24,13 +24,14 @@ flowchart LR
 - Prefer an **existing** domain service from the main n8n codebase (`FolderService`, `ProjectService`,
   `WorkflowService`, …). When the importer needs a capability the service lacks — reusing a source id,
   or a fetch-by-ids for matching — **extend that existing service with a general method** rather than
-  reaching for the repository or spinning up an import-only service. Canonical example:
+  reaching for the repository or spinning up an import-only service. Canonical examples:
+  `ProjectService.createTeamProject(data, overrides)` (preset id + description) and
   `FolderService.createFolder(dto, projectId, id?)` / `FolderService.getFoldersByIds(ids)`.
-- The pipeline delegates the plan/gate/apply work to `ScopedEntityImporter` (imports folders + workflows
-  + credential deps into one project scope). `WorkflowPackageImporter` resolves the target scope from the
-  request and calls it. A follow-up adds whole-**project** package import (its own shape + scope
-  resolution) reusing the same core. Don't split folder vs workflow: they share target resolution,
-  credential resolution, and publishing.
+- The pipeline is a thin **dispatcher**: it reads the manifest and delegates to a per-package-shape
+  importer (`ProjectPackageImporter` / `WorkflowPackageImporter`). Package shapes mirror export's
+  mutual exclusivity — a **project package** (projects defined by the package) vs a **workflow package**
+  (loose workflows + their folders + credential deps into a target project). Don't split folder vs
+  workflow: they share target resolution, credential resolution, and publishing.
 
 ### Adding an IMPORT property
 

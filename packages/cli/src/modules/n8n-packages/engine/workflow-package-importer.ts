@@ -86,6 +86,7 @@ export class WorkflowPackageImporter {
 			projectId: context.projectId,
 			workflows: scoped.workflowOutcomes,
 			folders: scoped.folderSummaries,
+			projects: [],
 			bindings: scoped.bindings,
 			credentials: {
 				matched: scoped.credentialResult.matched,

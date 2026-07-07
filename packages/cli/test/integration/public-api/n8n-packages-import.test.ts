@@ -147,6 +147,7 @@ describe('POST /n8n-packages/import', () => {
 				},
 			],
 			folders: [],
+			projects: [],
 			bindings: {
 				workflows: { 'wf-http-source': expect.any(String) },
 				credentials: {},
