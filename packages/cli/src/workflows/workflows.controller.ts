@@ -65,6 +65,7 @@ import { NamingService } from '@/services/naming.service';
 import { ProjectService } from '@/services/project.service.ee';
 import { UserManagementMailer } from '@/user-management/email';
 import * as utils from '@/utils';
+import { OwnershipService } from '@/services/ownership.service';
 
 @RestController('/workflows')
 export class WorkflowsController {
@@ -91,6 +92,7 @@ export class WorkflowsController {
 		private readonly ssrfProtectionService: SsrfProtectionService,
 		private readonly outboundHttp: OutboundHttp,
 		private readonly workflowPublicationStatusService: WorkflowPublicationStatusService,
+		private readonly ownershipService: OwnershipService,
 	) {}
 
 	@Post('/')
@@ -522,6 +524,8 @@ export class WorkflowsController {
 			n8nAuthCookie,
 		);
 
+		const project = await this.ownershipService.getWorkflowProjectCached(dbWorkflow.id);
+
 		if ('executionId' in result) {
 			this.eventService.emit('workflow-executed', {
 				user: {
@@ -535,6 +539,8 @@ export class WorkflowsController {
 				workflowName: dbWorkflow.name,
 				executionId: result.executionId,
 				source: 'user-manual',
+				projectId: project.id,
+				projectName: project.name,
 			});
 		}
 

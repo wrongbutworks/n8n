@@ -88,6 +88,8 @@ export class WorkflowExecutionService {
 			},
 		});
 
+		const project = await this.ownershipService.getWorkflowProjectCached(workflowData.id);
+
 		// Start the workflow
 		const runData: IWorkflowExecutionDataProcess = {
 			userId: additionalData.userId,
@@ -95,8 +97,11 @@ export class WorkflowExecutionService {
 			executionData,
 			workflowData,
 			deduplicationKey,
+			projectId: project.id,
+			projectName: project.name,
 		};
 
+		console.log({ runData });
 		return await this.workflowRunner.run(runData, true, undefined, undefined, responsePromise);
 	}
 
@@ -267,6 +272,7 @@ export class WorkflowExecutionService {
 				});
 			}
 
+			console.log({ data });
 			const executionId = await this.workflowRunner.run(data);
 			return { executionId };
 		}
@@ -307,6 +313,8 @@ export class WorkflowExecutionService {
 			workflowName: workflowData.name,
 			executionId,
 			source: 'chat',
+			projectId: project.id,
+			projectName: project.name,
 		});
 
 		return {
@@ -502,6 +510,8 @@ export class WorkflowExecutionService {
 				workflowName: workflowData.name,
 				executionId,
 				source: 'error',
+				projectId: runningProject.id,
+				projectName: runningProject.name,
 			});
 		} catch (error) {
 			this.errorReporter.error(error);
