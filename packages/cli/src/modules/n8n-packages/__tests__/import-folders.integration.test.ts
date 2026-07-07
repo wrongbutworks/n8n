@@ -12,7 +12,12 @@ import { LicenseMocker } from '@test-integration/license';
 
 import { N8nPackagesService } from '../n8n-packages.service';
 import type { FolderConflictPolicy, ImportPackageRequest } from '../n8n-packages.types';
-import { buildEntityPackageBuffer, serializedFolder } from './fixtures/package-fixtures';
+import {
+	buildEntityPackageBuffer,
+	credentialRequirementsFromWorkflows,
+	serializedFolder,
+	serializedWorkflowWithCredential,
+} from './fixtures/package-fixtures';
 
 type FolderImportParams = {
 	user: User;
@@ -336,5 +341,59 @@ describe('folder shell import', () => {
 				apiKeyScopes: ['workflow:import'],
 			}),
 		).rejects.toBeInstanceOf(ForbiddenError);
+	});
+
+	it('reports the real parent for a nested folder updated on re-import', async () => {
+		const pkg = async () =>
+			await buildEntityPackageBuffer({
+				folders: [
+					{ target: 'folders/p', folder: serializedFolder({ id: 'P', name: 'p' }) },
+					{
+						target: 'folders/p/c',
+						folder: serializedFolder({ id: 'C', name: 'c', parentFolderId: 'P' }),
+					},
+				],
+			});
+
+		await importFolders({ user: owner, projectId: project.id, packageBuffer: await pkg() });
+		const result = await importFolders({
+			user: owner,
+			projectId: project.id,
+			packageBuffer: await pkg(),
+			folderConflictPolicy: 'new-version',
+		});
+
+		expect(result.folders.find((f) => f.sourceFolderId === 'C')).toMatchObject({
+			status: 'updated',
+			parentFolderId: 'P',
+		});
+	});
+
+	it('does not process credentials needed only by skipped nested workflows', async () => {
+		const nestedWorkflow = serializedWorkflowWithCredential({
+			id: 'WF',
+			name: 'triage',
+			credentialId: 'missing-cred',
+			credentialName: 'Linear',
+		});
+		const packageBuffer = await buildEntityPackageBuffer({
+			folders: [
+				{
+					target: 'folders/in_progress',
+					folder: serializedFolder({ id: 'F1', name: 'in_progress' }),
+				},
+			],
+			workflows: [{ target: 'folders/in_progress/workflows/triage', workflow: nestedWorkflow }],
+			manifestExtras: {
+				requirements: { credentials: credentialRequirementsFromWorkflows([nestedWorkflow]) },
+			},
+		});
+
+		// credentialMissingMode defaults to must-preexist here; the folder-nested workflow (and its
+		// missing credential) are skipped, so the import must not be blocked.
+		const result = await importFolders({ user: owner, projectId: project.id, packageBuffer });
+
+		expect(result.folders[0].status).toBe('created');
+		expect(result.workflows).toEqual([]);
 	});
 });

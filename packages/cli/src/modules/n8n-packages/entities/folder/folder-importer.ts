@@ -12,7 +12,6 @@ import type {
 } from './folder-import.types';
 import type { FolderConflict, ImportedFolderSummary } from '../../n8n-packages.types';
 
-/** Target-state of a package folder id that already exists somewhere on the instance. */
 interface ExistingFolder {
 	projectId: string;
 	parentFolderId: string | null;
@@ -20,13 +19,10 @@ interface ExistingFolder {
 }
 
 /**
- * Imports the package's folder shells into the target project in two phases:
- * {@link plan} orders them parent-before-child, matches each against the target and decides
- * create/update/skip (or records a blocking conflict); {@link apply} writes the plan.
- *
- * Folder ids are reused verbatim (no id policy), so a package folder's id is both its
- * source id and its target id, and a nested folder's `parentFolderId` already names its
- * in-package parent. Persistence goes through {@link FolderService}, never the repository.
+ * Imports the package's folder shells into the target project. `plan` matches each folder against
+ * the target and decides create/update/skip (or a blocking conflict); `apply` writes it. Folder ids
+ * are reused as-is, so a package folder's id is also its target id and a nested folder's
+ * `parentFolderId` already names its in-package parent.
  */
 @Service()
 export class FolderImporter {
@@ -93,17 +89,14 @@ export class FolderImporter {
 				action: decision.action,
 				sourceFolderId: folder.sourceFolderId,
 				name: folder.name,
+				targetParentFolderId,
 			});
 		}
 
 		return { items, conflicts };
 	}
 
-	/**
-	 * Writes the plan folder-by-folder through {@link FolderService}. Ordering is parent-first
-	 * (from {@link plan}), so a nested folder's parent already exists when it is created. Conflicts
-	 * are gated in {@link plan}, so nothing is written when the import is blocked.
-	 */
+	// Parent-first ordering (from `plan`) means a nested folder's parent already exists when created.
 	async apply(
 		context: FolderImportContext,
 		plan: FolderImportPlan,
@@ -112,7 +105,7 @@ export class FolderImporter {
 
 		for (const item of plan.items) {
 			if (item.action === 'skip') {
-				summaries.push(toSummary(item, null, 'skipped'));
+				summaries.push(toSummary(item, 'skipped'));
 				continue;
 			}
 
@@ -120,7 +113,7 @@ export class FolderImporter {
 				await this.folderService.updateFolder(item.sourceFolderId, context.projectId, {
 					name: item.name,
 				});
-				summaries.push(toSummary(item, null, 'updated'));
+				summaries.push(toSummary(item, 'updated'));
 				continue;
 			}
 
@@ -129,7 +122,7 @@ export class FolderImporter {
 				context.projectId,
 				item.sourceFolderId,
 			);
-			summaries.push(toSummary(item, item.targetParentFolderId, 'created'));
+			summaries.push(toSummary(item, 'created'));
 		}
 
 		return summaries;
@@ -152,14 +145,13 @@ export class FolderImporter {
 
 function toSummary(
 	item: FolderPlanItem,
-	parentFolderId: string | null,
 	status: ImportedFolderSummary['status'],
 ): ImportedFolderSummary {
 	return {
 		sourceFolderId: item.sourceFolderId,
 		localId: item.sourceFolderId,
 		name: item.name,
-		parentFolderId,
+		parentFolderId: item.targetParentFolderId,
 		status,
 	};
 }

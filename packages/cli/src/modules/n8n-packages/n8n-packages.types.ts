@@ -59,9 +59,8 @@ export type ImportPackageRequest = {
 	folderId?: string;
 	packageBuffer: Buffer;
 	/**
-	 * API-key scopes of the caller (public API only). When present, the pipeline asserts the key
-	 * carries the scopes the package's contents require (e.g. `folder:create`, `project:create`),
-	 * mirroring export. Absent for internal callers, which are authorized by user RBAC alone.
+	 * API-key scopes of the caller (public API only). When set, the pipeline asserts the key carries
+	 * the scopes the package's contents require; internal callers omit it and rely on user RBAC.
 	 */
 	apiKeyScopes?: string[];
 } & ImportCredentialProperties &
@@ -193,12 +192,8 @@ export type BlockingIssue =
 	| ({ type: 'folder-conflict' } & FolderConflict);
 
 /**
- * A package folder that cannot be imported as-is. `kind` distinguishes the cause:
- * - `parent-mismatch`: an already-imported folder (matched by id in the target project) sits under a
- *   different parent than the package places it — re-importing would move it, so the import is blocked.
- * - `id-in-other-project`: the folder id already exists in a *different* project on the instance
- *   (folder ids are a global primary key), so it cannot be reused here.
- * - `fail-policy`: the folder already exists and `folderConflictPolicy` is `fail`.
+ * A package folder that can't be imported: a matched folder would move (`parent-mismatch`), its id is
+ * owned by another project (`id-in-other-project`), or it already exists under a `fail` policy.
  */
 export interface FolderConflict {
 	kind: 'parent-mismatch' | 'id-in-other-project' | 'fail-policy';

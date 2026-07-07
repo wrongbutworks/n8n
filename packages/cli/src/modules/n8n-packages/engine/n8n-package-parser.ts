@@ -37,11 +37,7 @@ export class N8nPackageParser {
 		}
 	}
 
-	/**
-	 * Reads the package's top-level workflows. Workflows nested inside a folder or
-	 * project are deliberately skipped here — placing them into their recreated
-	 * folder is a follow-up concern; a plain workflow package is unaffected.
-	 */
+	/** Reads the package's top-level workflows; those nested in a folder or project are skipped. */
 	async getWorkflows(reader: PackageReader): Promise<PreparedWorkflow[]> {
 		const manifest = await this.getManifest(reader);
 

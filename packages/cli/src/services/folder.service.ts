@@ -45,8 +45,7 @@ export class FolderService {
 		}
 
 		const folderEntity = this.folderRepository.create({
-			// A preset id lets callers reuse an id from another instance (e.g. package import);
-			// `@BeforeInsert` only mints an id when one isn't already set.
+			// Reuse a preset id when given; @BeforeInsert only mints one when unset.
 			...(id ? { id } : {}),
 			name,
 			homeProject: { id: projectId },

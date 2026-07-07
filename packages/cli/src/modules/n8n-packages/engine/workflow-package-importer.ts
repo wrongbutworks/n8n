@@ -11,10 +11,14 @@ import { FolderService } from '@/services/folder.service';
 import { ProjectService } from '@/services/project.service.ee';
 
 import type { CredentialBindingRequest } from '../entities/credential/credential.types';
-import type { WorkflowImportOutcome } from '../entities/workflow/workflow-import.types';
+import type {
+	PreparedWorkflow,
+	WorkflowImportOutcome,
+} from '../entities/workflow/workflow-import.types';
 import type { ImportContext, ImportPackageRequest, ImportResult } from '../n8n-packages.types';
 import type { PackageReader } from '../io/package-reader';
 import type { PackageManifest } from '../spec/manifest.schema';
+import type { PackageCredentialRequirement } from '../spec/requirements.schema';
 import {
 	assertPackageImportApiKeyScopes,
 	buildImportResult,
@@ -24,10 +28,8 @@ import { N8nPackageParser } from './n8n-package-parser';
 import { ScopedEntityImporter } from './scoped-entity-importer';
 
 /**
- * Imports a workflow package — loose top-level workflows, their organizing folder shells, and
- * their credential dependencies — into a single target project (request `projectId`/`folderId`).
- * Resolves the target scope, then delegates the plan/gate/apply work to {@link ScopedEntityImporter}.
- * Entities nested inside a folder or project are not placed here; that is a follow-up.
+ * Imports loose top-level workflows, their folder shells, and credential deps into a target project.
+ * Resolves the target scope from the request, then delegates plan/gate/apply to ScopedEntityImporter.
  */
 @Service()
 export class WorkflowPackageImporter {
@@ -47,7 +49,8 @@ export class WorkflowPackageImporter {
 	): Promise<ImportResult> {
 		const folders = await this.packageParser.getFolders(reader);
 		if (folders.length > 0) {
-			assertPackageImportApiKeyScopes(request.apiKeyScopes, ['folder:create']);
+			// A re-import updates matched folders in place (new-version), so both scopes are required.
+			assertPackageImportApiKeyScopes(request.apiKeyScopes, ['folder:create', 'folder:update']);
 			this.assertFoldersLicensed();
 		}
 
@@ -60,7 +63,9 @@ export class WorkflowPackageImporter {
 
 		const workflows = await this.packageParser.getWorkflows(reader);
 		const credentialRequest: CredentialBindingRequest = {
-			requirements: manifest.requirements?.credentials,
+			// Requirements cover every exported workflow; scope them to the ones actually imported so
+			// credentials used only by skipped (nested) workflows don't block or stub this import.
+			requirements: scopeRequirementsToWorkflows(manifest.requirements?.credentials, workflows),
 			matchingMode: request.credentialMatchingMode,
 			missingMode: request.credentialMissingMode,
 			credentialBindings: request.credentialBindings,
@@ -154,7 +159,7 @@ export class WorkflowPackageImporter {
 		needsFolderCreate: boolean,
 	): Promise<ImportContext> {
 		const scopes: Scope[] = needsFolderCreate
-			? ['workflow:import', 'folder:create']
+			? ['workflow:import', 'folder:create', 'folder:update']
 			: ['workflow:import'];
 		const project = await this.resolveImportProject(user, projectId, scopes);
 		await this.assertFolderExistsInProject(folderId, project.id);
@@ -200,4 +205,20 @@ export class WorkflowPackageImporter {
 			throw new UserError(`Folder not found in target project: ${folderId}`, { cause });
 		}
 	}
+}
+
+/** Keeps only the credential requirements used by the imported workflows, trimming `usedByWorkflows` to match. */
+function scopeRequirementsToWorkflows(
+	requirements: PackageCredentialRequirement[] | undefined,
+	workflows: PreparedWorkflow[],
+): PackageCredentialRequirement[] | undefined {
+	if (!requirements) return undefined;
+
+	const importedIds = new Set(workflows.map((workflow) => workflow.sourceWorkflowId));
+	return requirements
+		.map((requirement) => ({
+			...requirement,
+			usedByWorkflows: requirement.usedByWorkflows.filter((id) => importedIds.has(id)),
+		}))
+		.filter((requirement) => requirement.usedByWorkflows.length > 0);
 }

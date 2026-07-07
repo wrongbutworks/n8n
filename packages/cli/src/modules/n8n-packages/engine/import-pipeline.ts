@@ -6,11 +6,7 @@ import { TarPackageReader } from '../io/tar/tar-package-reader';
 import { PackageImportConfig } from '../n8n-packages.config';
 import type { ImportPackageRequest, ImportResult } from '../n8n-packages.types';
 
-/**
- * Entry point for package import. Reads the manifest and delegates to the workflow-package importer,
- * which imports loose workflows, their organizing folder shells, and credential deps into a target
- * project. (Whole-project packages are handled by a follow-up.)
- */
+/** Reads the manifest and delegates to the workflow-package importer. */
 @Service()
 export class ImportPipeline {
 	constructor(
