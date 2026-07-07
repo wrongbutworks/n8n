@@ -19,6 +19,7 @@ import { z } from 'zod';
 
 import { UM_FIX_INSTRUCTION } from '@/constants';
 import { CredentialsService } from '@/credentials/credentials.service';
+import { OwnershipService } from '@/services/ownership.service';
 import { WorkflowService } from '@/workflows/workflow.service';
 
 import { BaseCommand } from '../base-command';
@@ -95,12 +96,20 @@ export class Reset extends BaseCommand<z.infer<typeof flagsSchema>> {
 
 			const project = await this.getProject(flags.userId, flags.projectId);
 
+			const transferredWorkflowIds: string[] = [];
 			await Container.get(UserRepository).manager.transaction(async (trx) => {
 				for (const projectId of personalProjectIds) {
-					await Container.get(WorkflowService).transferAll(projectId, project.id, trx);
+					transferredWorkflowIds.push(
+						...(await Container.get(WorkflowService).transferAll(projectId, project.id, trx)),
+					);
 					await Container.get(CredentialsService).transferAll(projectId, project.id, trx);
 				}
 			});
+
+			// Invalidate the stale cached owner project for the re-homed workflows.
+			await Container.get(OwnershipService).invalidateWorkflowProjectCacheByIds(
+				transferredWorkflowIds,
+			);
 		}
 
 		const [ownedSharedWorkflows, ownedSharedCredentials] = await Promise.all([

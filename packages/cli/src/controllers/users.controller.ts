@@ -47,6 +47,7 @@ import { ProvisioningService } from '@/modules/provisioning.ee/provisioning.serv
 import { UserRequest } from '@/requests';
 import { FolderService } from '@/services/folder.service';
 import { JwtService } from '@/services/jwt.service';
+import { OwnershipService } from '@/services/ownership.service';
 import { UrlService } from '@/services/url.service';
 import { UserService } from '@/services/user.service';
 import { WorkflowService } from '@/workflows/workflow.service';
@@ -70,6 +71,7 @@ export class UsersController {
 		private readonly urlService: UrlService,
 		private readonly provisioningService: ProvisioningService,
 		private readonly moduleRegistry: ModuleRegistry,
+		private readonly ownershipService: OwnershipService,
 	) {}
 
 	private get dataTableService() {
@@ -288,8 +290,9 @@ export class UsersController {
 
 			transfereeId = transferee.id;
 
+			let transferredWorkflowIds: string[] = [];
 			await this.userService.getManager().transaction(async (trx) => {
-				await this.workflowService.transferAll(
+				transferredWorkflowIds = await this.workflowService.transferAll(
 					personalProjectToDelete.id,
 					transfereeProjectId,
 					trx,
@@ -306,6 +309,10 @@ export class UsersController {
 					trx,
 				);
 			});
+
+			// The bulk transfer re-homed these workflows but their cached owner project
+			// is now stale; invalidate after commit so ownership lookups re-read the DB.
+			await this.ownershipService.invalidateWorkflowProjectCacheByIds(transferredWorkflowIds);
 		}
 
 		const [ownedSharedWorkflows, ownedSharedCredentials] = await Promise.all([
