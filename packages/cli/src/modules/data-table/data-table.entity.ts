@@ -5,7 +5,6 @@ import { DataTableColumn } from './data-table-column.entity';
 
 @Entity()
 @Index(['name', 'projectId'], { unique: true })
-// eslint-disable-next-line n8n-local-rules/project-owned-entity-transfer -- covered: transferred by OwnershipTransferService.transferAllResources()
 export class DataTable extends WithTimestampsAndStringId {
 	constructor() {
 		super();

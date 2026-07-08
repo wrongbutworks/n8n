@@ -46,7 +46,7 @@ import { ExternalHooks } from '@/external-hooks';
 import { ProvisioningService } from '@/modules/provisioning.ee/provisioning.service.ee';
 import { UserRequest } from '@/requests';
 import { JwtService } from '@/services/jwt.service';
-import { OwnershipTransferService } from '@/services/ownership-transfer.service';
+import { OwnershipTransferService } from '@/services/ownership-transfer/ownership-transfer.service';
 import { UrlService } from '@/services/url.service';
 import { UserService } from '@/services/user.service';
 import { WorkflowService } from '@/workflows/workflow.service';

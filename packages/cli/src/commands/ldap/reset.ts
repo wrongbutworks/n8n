@@ -19,7 +19,7 @@ import { z } from 'zod';
 
 import { UM_FIX_INSTRUCTION } from '@/constants';
 import { CredentialsService } from '@/credentials/credentials.service';
-import { OwnershipTransferService } from '@/services/ownership-transfer.service';
+import { OwnershipTransferService } from '@/services/ownership-transfer/ownership-transfer.service';
 import { WorkflowService } from '@/workflows/workflow.service';
 
 import { BaseCommand } from '../base-command';

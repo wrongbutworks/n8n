@@ -4,7 +4,6 @@ import { WithStringId } from './abstract-entity';
 import type { Project } from './project';
 
 @Entity()
-// eslint-disable-next-line n8n-local-rules/project-owned-entity-transfer -- excluded: project-scoped variables are dropped via FK cascade
 export class Variables extends WithStringId {
 	@Column('text')
 	key: string;

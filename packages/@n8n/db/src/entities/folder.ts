@@ -14,7 +14,6 @@ import { TagEntity } from './tag-entity';
 import type { WorkflowEntity } from './workflow-entity';
 
 @Entity()
-// eslint-disable-next-line n8n-local-rules/project-owned-entity-transfer -- covered: transferred by OwnershipTransferService.transferAllResources()
 export class Folder extends WithTimestampsAndStringId {
 	@Column()
 	name: string;

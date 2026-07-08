@@ -19,7 +19,6 @@ import { Agent } from './agent.entity';
  * Both use the same `threadId` value but serve different layers.
  */
 @Entity({ name: 'agent_execution_threads' })
-// eslint-disable-next-line n8n-local-rules/project-owned-entity-transfer -- excluded: dropped via FK cascade together with its Agent
 export class AgentExecutionThread extends WithTimestampsAndStringId {
 	@ManyToOne(() => Agent, { onDelete: 'CASCADE' })
 	@JoinColumn({ name: 'agentId' })

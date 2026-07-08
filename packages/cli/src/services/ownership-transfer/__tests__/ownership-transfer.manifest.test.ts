@@ -1,14 +1,16 @@
 import { getMetadataArgsStorage } from '@n8n/typeorm';
-import { readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 
-// Register core entity decorators
+// Register all core entity decorators
 import '@n8n/db';
 
 import {
 	TRANSFERRED_PROJECT_RESOURCES,
 	NOT_TRANSFERRED_PROJECT_RESOURCES,
 } from '../ownership-transfer.manifest';
+
+const REPO_ROOT = path.resolve(__dirname, '../../../../../..');
 
 function findEntityFiles(dir: string): string[] {
 	return readdirSync(dir, { withFileTypes: true, recursive: true })
@@ -23,8 +25,8 @@ function findEntityFiles(dir: string): string[] {
  *
  * If this test fails with an unhandled entity: handle it in
  * `OwnershipTransferService.transferAllResources()` and add it to
- * `TRANSFERRED_PROJECT_RESOURCES`, or consciously exclude it with a reason in
- * `NOT_TRANSFERRED_PROJECT_RESOURCES`.
+ * `transferred` in `ownership-transfer.manifest.json`, or consciously exclude
+ * it via `notTransferred` with the reason.
  */
 describe('ownership-transfer manifest', () => {
 	const projectOwnedEntityNames = new Set<string>();
@@ -33,7 +35,7 @@ describe('ownership-transfer manifest', () => {
 	beforeAll(async () => {
 		// Register module entity decorators via the filesystem so that a newly
 		// added module entity is picked up without editing this test.
-		const moduleEntityFiles = findEntityFiles(path.resolve(__dirname, '../../modules'));
+		const moduleEntityFiles = findEntityFiles(path.resolve(__dirname, '../../../modules'));
 		moduleEntityFileCount = moduleEntityFiles.length;
 		await Promise.all(moduleEntityFiles.map(async (file) => await import(file)));
 
@@ -62,10 +64,8 @@ describe('ownership-transfer manifest', () => {
 		}
 	}, 120_000);
 
-	const manifestNames = new Set<string>([
-		...TRANSFERRED_PROJECT_RESOURCES,
-		...Object.keys(NOT_TRANSFERRED_PROJECT_RESOURCES),
-	]);
+	const manifestEntries = [...TRANSFERRED_PROJECT_RESOURCES, ...NOT_TRANSFERRED_PROJECT_RESOURCES];
+	const manifestNames = new Set(manifestEntries.map((entry) => entry.name));
 
 	it('registers module entities', () => {
 		expect(moduleEntityFileCount).toBeGreaterThan(0);
@@ -86,10 +86,18 @@ describe('ownership-transfer manifest', () => {
 		expect(stale.sort()).toEqual([]);
 	});
 
-	it('lists each entity in only one category', () => {
-		const overlap = TRANSFERRED_PROJECT_RESOURCES.filter(
-			(name) => name in NOT_TRANSFERRED_PROJECT_RESOURCES,
-		);
-		expect(overlap).toEqual([]);
+	it('lists each entity only once', () => {
+		expect(manifestNames.size).toBe(manifestEntries.length);
+	});
+
+	it('pins every entry to the file that declares the entity', () => {
+		const broken = manifestEntries
+			.filter((entry) => {
+				const filePath = path.join(REPO_ROOT, entry.path);
+				if (!existsSync(filePath)) return true;
+				return !new RegExp(`\\bclass ${entry.name}\\b`).test(readFileSync(filePath, 'utf8'));
+			})
+			.map((entry) => `${entry.name} → ${entry.path}`);
+		expect(broken).toEqual([]);
 	});
 });

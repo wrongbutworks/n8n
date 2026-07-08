@@ -3,10 +3,11 @@ import { ProjectOwnedEntityTransferRule } from './project-owned-entity-transfer.
 
 const ruleTester = new RuleTester();
 
-// NOTE: acknowledging a decision is done with a standard
-// `eslint-disable-next-line n8n-local-rules/project-owned-entity-transfer -- <decision>`
-// comment on the class line. RuleTester does not process disable directives,
-// so the valid cases below only cover classes the rule must not flag at all.
+const SHARED_WORKFLOW_ENTRY = {
+	name: 'SharedWorkflow',
+	path: 'packages/@n8n/db/src/entities/shared-workflow.ts',
+};
+
 ruleTester.run('project-owned-entity-transfer', ProjectOwnedEntityTransferRule, {
 	valid: [
 		// Entity without any Project reference needs no decision
@@ -18,6 +19,18 @@ ruleTester.run('project-owned-entity-transfer', ProjectOwnedEntityTransferRule, 
 					method: string;
 				}
 			`,
+		},
+		// Project-owned entity listed in the manifest, declared in the listed file
+		{
+			code: `
+				@Entity()
+				export class SharedWorkflow {
+					@Column()
+					projectId: string;
+				}
+			`,
+			filename: '/repo/packages/@n8n/db/src/entities/shared-workflow.ts',
+			options: [{ acknowledged: [SHARED_WORKFLOW_ENTRY] }],
 		},
 		// The Project entity itself is not "project-owned"
 		{
@@ -39,7 +52,7 @@ ruleTester.run('project-owned-entity-transfer', ProjectOwnedEntityTransferRule, 
 		},
 	],
 	invalid: [
-		// projectId column
+		// projectId column, no manifest entry
 		{
 			code: `
 				@Entity()
@@ -49,6 +62,31 @@ ruleTester.run('project-owned-entity-transfer', ProjectOwnedEntityTransferRule, 
 				}
 			`,
 			errors: [{ messageId: 'missingTransferDecision' }],
+		},
+		// listing OTHER entities does not acknowledge this one
+		{
+			code: `
+				@Entity()
+				export class DataTable {
+					@Column()
+					projectId: string;
+				}
+			`,
+			options: [{ acknowledged: [SHARED_WORKFLOW_ENTRY] }],
+			errors: [{ messageId: 'missingTransferDecision' }],
+		},
+		// same name declared in a DIFFERENT file than the manifest entry
+		{
+			code: `
+				@Entity()
+				export class SharedWorkflow {
+					@Column()
+					projectId: string;
+				}
+			`,
+			filename: '/repo/packages/cli/src/modules/rogue/shared-workflow.ts',
+			options: [{ acknowledged: [SHARED_WORKFLOW_ENTRY] }],
+			errors: [{ messageId: 'pathMismatch' }],
 		},
 		// arrow-function relation to Project
 		{
