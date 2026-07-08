@@ -19,11 +19,7 @@ import { resolveImportPackageUpload } from '@/modules/n8n-packages/utils/import-
 
 const PACKAGE_EXPORT_SCOPES = 'project:export,workflow:export';
 
-type ExportPackageRequest = AuthenticatedRequest<
-	{},
-	{},
-	{ workflowIds?: string[]; folderIds?: string[]; projectIds?: string[] }
->;
+type ExportPackageRequest = AuthenticatedRequest<{}, {}, ExportPackageRequestDto>;
 
 type ImportPackageRequest = PackageRequest.Import & {
 	files?: Express.Multer.File[];
@@ -88,6 +84,7 @@ const n8nPackagesHandlers: N8nPackagesHandlers = {
 			const workflowIds = payload.data.workflowIds ?? [];
 			const folderIds = payload.data.folderIds ?? [];
 			const projectIds = payload.data.projectIds ?? [];
+			const { subworkflowBehaviour } = payload.data;
 
 			// A package is either a set of loose workflows/folders or a set of whole projects, not both.
 			if (projectIds.length > 0 && (workflowIds.length > 0 || folderIds.length > 0)) {
@@ -105,6 +102,7 @@ const n8nPackagesHandlers: N8nPackagesHandlers = {
 				workflowIds,
 				folderIds,
 				projectIds,
+				...(subworkflowBehaviour ? { subworkflowBehaviour } : {}),
 			});
 
 			return await streamPackageExport(res, stream);

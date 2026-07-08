@@ -1,3 +1,4 @@
+import type { ExportPackageRequestDto } from '@n8n/api-types';
 import { mockInstance } from '@n8n/backend-test-utils';
 import type { AuthenticatedRequest } from '@n8n/db';
 import { Container } from '@n8n/di';
@@ -30,10 +31,7 @@ beforeAll(async () => {
 describe('n8n-packages handler', () => {
 	let mockService: Mocked<N8nPackagesService>;
 
-	function makeRequest(
-		body: { workflowIds?: string[]; folderIds?: string[]; projectIds?: string[] },
-		apiKeyScopes?: string[],
-	) {
+	function makeRequest(body: ExportPackageRequestDto, apiKeyScopes?: string[]) {
 		return {
 			user: { id: 'user-1' },
 			body,
@@ -220,6 +218,30 @@ describe('n8n-packages handler', () => {
 			workflowIds: [],
 			folderIds: ['fld-1'],
 			projectIds: [],
+		});
+	});
+
+	it('passes subworkflowBehaviour through to the service', async () => {
+		const stream = new PassThrough();
+		mockService.exportPackage.mockResolvedValue(stream);
+		const res = makeResponse();
+
+		const resultPromise = run(
+			makeRequest({ workflowIds: ['wf-1'], subworkflowBehaviour: 'references-only' }, [
+				'workflow:export',
+			]),
+			res,
+		);
+		stream.end(Buffer.from('package-bytes'));
+		const caught = await resultPromise;
+
+		expect(caught).toBeUndefined();
+		expect(mockService.exportPackage).toHaveBeenCalledWith({
+			user: { id: 'user-1' },
+			workflowIds: ['wf-1'],
+			folderIds: [],
+			projectIds: [],
+			subworkflowBehaviour: 'references-only',
 		});
 	});
 });
