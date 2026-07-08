@@ -5,6 +5,7 @@ import { Project } from './project';
 import { Role } from './role';
 import { User } from './user';
 
+// @ownershipTransfer excluded — membership rows describe the deleted project itself
 @Entity()
 export class ProjectRelation extends WithTimestamps {
 	@ManyToOne('Role', 'projectRelations')

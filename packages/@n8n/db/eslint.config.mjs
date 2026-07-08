@@ -9,6 +9,7 @@ export default defineConfig(
 	{
 		rules: {
 			'unicorn/filename-case': ['error', { case: 'kebabCase' }],
+			'n8n-local-rules/project-owned-entity-transfer': 'error',
 
 			// TODO: Remove this
 			'@typescript-eslint/naming-convention': 'warn',

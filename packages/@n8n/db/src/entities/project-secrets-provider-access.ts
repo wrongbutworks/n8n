@@ -8,6 +8,7 @@ export type SecretsProviderAccessRole =
 	| 'secretsProviderConnection:owner'
 	| 'secretsProviderConnection:user';
 
+// @ownershipTransfer excluded — per-project secrets-provider config, scoped to the deleted project
 @Entity()
 export class ProjectSecretsProviderAccess extends WithTimestamps {
 	@ManyToOne('SecretsProviderConnection', 'projectAccess')

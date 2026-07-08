@@ -5,6 +5,7 @@ import { WithTimestamps } from './abstract-entity';
 import { Project } from './project';
 import { WorkflowEntity } from './workflow-entity';
 
+// @ownershipTransfer covered — transferred by OwnershipTransferService.transferAllResources()
 @Entity()
 export class SharedWorkflow extends WithTimestamps {
 	@Column({ type: 'varchar' })

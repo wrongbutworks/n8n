@@ -3,6 +3,7 @@ import { Column, Entity, Index, JoinColumn, ManyToOne, OneToMany } from '@n8n/ty
 
 import { DataTableColumn } from './data-table-column.entity';
 
+// @ownershipTransfer covered — transferred by OwnershipTransferService.transferAllResources()
 @Entity()
 @Index(['name', 'projectId'], { unique: true })
 export class DataTable extends WithTimestampsAndStringId {

@@ -1,6 +1,7 @@
 import { WithTimestamps, JsonColumn, Project } from '@n8n/db';
 import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryColumn } from '@n8n/typeorm';
 
+// @ownershipTransfer excluded — AI assistant conversation history, personal to the deleted user
 @Entity({ name: 'instance_ai_threads' })
 export class InstanceAiThread extends WithTimestamps {
 	@PrimaryColumn('uuid')

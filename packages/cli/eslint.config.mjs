@@ -26,6 +26,7 @@ export default defineConfig(
 			'n8n-local-rules/no-dynamic-import-template': 'error',
 			'n8n-local-rules/misplaced-n8n-typeorm-import': 'error',
 			'n8n-local-rules/no-type-unsafe-event-emitter': 'error',
+			'n8n-local-rules/project-owned-entity-transfer': 'error',
 			// Disabled until we have a plan on how to fix these issues long term
 			'n8n-local-rules/no-import-enterprise-edition': 'off',
 

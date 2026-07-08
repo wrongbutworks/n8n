@@ -18,6 +18,7 @@ import { Agent } from './agent.entity';
  * which stores chat-history state owned by the n8n-memory integration.
  * Both use the same `threadId` value but serve different layers.
  */
+// @ownershipTransfer excluded — dropped via FK cascade together with its Agent
 @Entity({ name: 'agent_execution_threads' })
 export class AgentExecutionThread extends WithTimestampsAndStringId {
 	@ManyToOne(() => Agent, { onDelete: 'CASCADE' })

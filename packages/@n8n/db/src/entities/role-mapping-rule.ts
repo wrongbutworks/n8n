@@ -14,6 +14,7 @@ import { WithTimestampsAndStringId } from './abstract-entity';
 import { Project } from './project';
 import { Role } from './role';
 
+// @ownershipTransfer excluded — SSO role-mapping config attached to the project, not user data
 @Entity()
 @Index(['role'])
 @Unique(['type', 'order'])

@@ -13,6 +13,7 @@ import { Project } from './project';
 import { TagEntity } from './tag-entity';
 import type { WorkflowEntity } from './workflow-entity';
 
+// @ownershipTransfer covered — transferred by OwnershipTransferService.transferAllResources()
 @Entity()
 export class Folder extends WithTimestampsAndStringId {
 	@Column()

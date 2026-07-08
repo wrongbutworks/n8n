@@ -5,6 +5,7 @@ import { Column, Entity, ManyToOne, JoinColumn, type Relation } from '@n8n/typeo
 
 import type { AgentHistory } from './agent-history.entity';
 
+// @ownershipTransfer excluded — dropped via FK cascade today; revisit whether agents should transfer
 @Entity({ name: 'agents' })
 export class Agent extends WithTimestampsAndStringId {
 	@Column({ type: 'varchar', length: 128 })

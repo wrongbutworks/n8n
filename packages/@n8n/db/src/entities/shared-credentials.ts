@@ -5,6 +5,7 @@ import { WithTimestamps } from './abstract-entity';
 import { CredentialsEntity } from './credentials-entity';
 import { Project } from './project';
 
+// @ownershipTransfer covered — transferred by OwnershipTransferService.transferAllResources()
 @Entity()
 export class SharedCredentials extends WithTimestamps {
 	@Column({ type: 'varchar' })
