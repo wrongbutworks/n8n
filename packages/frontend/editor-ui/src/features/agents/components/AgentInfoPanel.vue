@@ -230,7 +230,6 @@ function onInstructionsInput(value: string) {
 	max-height: none;
 	min-height: calc(var(--spacing--4xl) + var(--spacing--xl));
 	overflow-y: visible;
-	padding: 0;
 }
 
 .field {
