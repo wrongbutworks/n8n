@@ -85,6 +85,16 @@ describe('OwnershipTransferService', () => {
 		expect(dataTableService.transferDataTablesByProjectId).toHaveBeenCalledWith('from-2', 'to');
 	});
 
+	it('should invalidate the cache before transferring data tables, so a data-table failure cannot leave the cache stale', async () => {
+		moduleRegistry.isActive.mockReturnValue(true);
+		workflowService.transferAll.mockResolvedValueOnce(['wf-1']);
+		dataTableService.transferDataTablesByProjectId.mockRejectedValueOnce(new Error('boom'));
+
+		await expect(service.transferAllResources(['from-1'], 'to')).rejects.toThrow('boom');
+
+		expect(ownershipService.invalidateWorkflowProjectCacheByIds).toHaveBeenCalledWith(['wf-1']);
+	});
+
 	it('should skip data tables when the module is inactive', async () => {
 		moduleRegistry.isActive.mockReturnValue(false);
 

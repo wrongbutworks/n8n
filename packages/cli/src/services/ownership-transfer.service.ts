@@ -48,15 +48,16 @@ export class OwnershipTransferService {
 			}
 		});
 
+		// The transfer re-homed these workflows, so their cached owner project is
+		// stale; invalidate immediately after commit (before any later step can
+		// fail) so ownership lookups re-read the DB.
+		await this.ownershipService.invalidateWorkflowProjectCacheByIds(transferredWorkflowIds);
+
 		if (this.moduleRegistry.isActive('data-table')) {
 			const dataTableService = await this.getDataTableService();
 			for (const fromProjectId of fromProjectIds) {
 				await dataTableService.transferDataTablesByProjectId(fromProjectId, toProjectId);
 			}
 		}
-
-		// The transfer re-homed these workflows, so their cached owner project is
-		// stale; invalidate after commit so ownership lookups re-read the DB.
-		await this.ownershipService.invalidateWorkflowProjectCacheByIds(transferredWorkflowIds);
 	}
 }
