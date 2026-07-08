@@ -15,12 +15,31 @@ export const ScheduledJobKind = {
 	Cron: 'cron',
 	Interval: 'interval',
 	OneOff: 'one_off',
+	RecurringCron: 'recurring_cron',
 } as const;
 
 export type ScheduledJobKind = (typeof ScheduledJobKind)[keyof typeof ScheduledJobKind];
 
 /** All recurrence kinds as a runtime list. */
 export const ScheduledJobKindList = Object.values(ScheduledJobKind);
+
+/**
+ * Calendar period a `recurring_cron` job's every-Nth-period gate counts in.
+ * Seconds and minutes are absent by design: a cron step expresses those
+ * directly, so they never need a gate.
+ */
+export const ScheduledJobRecurrenceUnit = {
+	Hours: 'hours',
+	Days: 'days',
+	Weeks: 'weeks',
+	Months: 'months',
+} as const;
+
+export type ScheduledJobRecurrenceUnit =
+	(typeof ScheduledJobRecurrenceUnit)[keyof typeof ScheduledJobRecurrenceUnit];
+
+/** All recurrence units as a runtime list. */
+export const ScheduledJobRecurrenceUnitList = Object.values(ScheduledJobRecurrenceUnit);
 
 /**
  * Where a scheduled task is in its lifecycle, from waiting to run to a final outcome.

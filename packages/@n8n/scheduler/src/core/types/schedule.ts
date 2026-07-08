@@ -1,4 +1,4 @@
-import type { ScheduledJobKind } from '@n8n/constants';
+import type { ScheduledJobKind, ScheduledJobRecurrenceUnit } from '@n8n/constants';
 import type { CronExpression } from 'n8n-workflow';
 
 /**
@@ -39,14 +39,33 @@ export interface OneOffSchedule {
 	fireAt: Date;
 }
 
-export type Schedule = CronSchedule | IntervalSchedule | OneOffSchedule;
+/**
+ * A cron anchor thinned by an every-Nth-period gate, for cadences cron alone
+ * cannot express ("every 3 weeks on Mon and Wed", "every 5 hours"). The anchor
+ * places fires within a period and may deliberately over-produce candidates;
+ * the gate keeps a candidate only when `recurrenceSize` or more wall-clock
+ * periods have elapsed since the previous fire (or zero, so a multi-position
+ * anchor fires each of its positions within one on-cadence period). Unlike
+ * plain cron, the next fire therefore depends on the previous one: `after`
+ * passed to the math must be the previous fire, not an arbitrary instant.
+ */
+export interface RecurringCronSchedule {
+	kind: 'recurring_cron';
+	cronExpression: CronExpression;
+	timezone: string | null;
+	recurrenceUnit: ScheduledJobRecurrenceUnit;
+	/** Integer >= 2: a stride of 1 is the anchor's own cadence, i.e. a plain cron. */
+	recurrenceSize: number;
+}
+
+export type Schedule = CronSchedule | IntervalSchedule | OneOffSchedule | RecurringCronSchedule;
 
 export interface ScheduledJob {
 	id: number;
 	taskType: string;
 	payload: Record<string, unknown>;
 	kind: ScheduledJobKind;
-	/** Set only when {@link kind} is `cron`. */
+	/** Set only when {@link kind} is `cron` or `recurring_cron`. */
 	cronExpression: string | null;
 	/** IANA zone a cron expression is evaluated in; `null` means the instance default. */
 	timezone: string | null;
@@ -54,6 +73,10 @@ export interface ScheduledJob {
 	intervalSeconds: number | null;
 	/** Set only when {@link kind} is `one_off`. */
 	fireAt: Date | null;
+	/** Set only when {@link kind} is `recurring_cron`. */
+	recurrenceUnit: ScheduledJobRecurrenceUnit | null;
+	/** Set only when {@link kind} is `recurring_cron`. */
+	recurrenceSize: number | null;
 	nextRunAt: Date | null; // the next instant the materializer materializes from.
 	lastFiredAt: Date | null;
 	maxAttempts: number;
