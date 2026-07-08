@@ -5,8 +5,8 @@ import { Project } from './project';
 import { Role } from './role';
 import { User } from './user';
 
-// @ownershipTransfer excluded — membership rows describe the deleted project itself
 @Entity()
+// eslint-disable-next-line n8n-local-rules/project-owned-entity-transfer -- excluded: membership rows describe the deleted project itself
 export class ProjectRelation extends WithTimestamps {
 	@ManyToOne('Role', 'projectRelations')
 	@JoinColumn({ name: 'role', referencedColumnName: 'slug' })

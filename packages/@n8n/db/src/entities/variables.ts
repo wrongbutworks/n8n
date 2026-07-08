@@ -3,8 +3,8 @@ import { Column, Entity, ManyToOne } from '@n8n/typeorm';
 import { WithStringId } from './abstract-entity';
 import type { Project } from './project';
 
-// @ownershipTransfer excluded — project-scoped variables are dropped via FK cascade; personal projects do not expose them
 @Entity()
+// eslint-disable-next-line n8n-local-rules/project-owned-entity-transfer -- excluded: project-scoped variables are dropped via FK cascade
 export class Variables extends WithStringId {
 	@Column('text')
 	key: string;

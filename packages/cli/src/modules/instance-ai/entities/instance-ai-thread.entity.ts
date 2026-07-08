@@ -1,8 +1,8 @@
 import { WithTimestamps, JsonColumn, Project } from '@n8n/db';
 import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryColumn } from '@n8n/typeorm';
 
-// @ownershipTransfer excluded — AI assistant conversation history, personal to the deleted user
 @Entity({ name: 'instance_ai_threads' })
+// eslint-disable-next-line n8n-local-rules/project-owned-entity-transfer -- excluded: AI assistant conversation history, personal to the deleted user
 export class InstanceAiThread extends WithTimestamps {
 	@PrimaryColumn('uuid')
 	id: string;

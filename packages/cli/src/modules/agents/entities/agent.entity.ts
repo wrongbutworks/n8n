@@ -5,8 +5,8 @@ import { Column, Entity, ManyToOne, JoinColumn, type Relation } from '@n8n/typeo
 
 import type { AgentHistory } from './agent-history.entity';
 
-// @ownershipTransfer excluded — dropped via FK cascade today; revisit whether agents should transfer
 @Entity({ name: 'agents' })
+// eslint-disable-next-line n8n-local-rules/project-owned-entity-transfer -- excluded: dropped via FK cascade today; revisit whether agents should transfer
 export class Agent extends WithTimestampsAndStringId {
 	@Column({ type: 'varchar', length: 128 })
 	name: string;

@@ -1,8 +1,6 @@
 import { ESLintUtils, TSESTree } from '@typescript-eslint/utils';
 
-const RELATION_DECORATORS = new Set(['ManyToOne', 'OneToOne']);
-
-const MARKER = '@ownershipTransfer';
+const RELATION_DECORATORS = new Set(['ManyToOne', 'OneToOne', 'ManyToMany']);
 
 function isEntityClass(node: TSESTree.ClassDeclaration): boolean {
 	return node.decorators.some(
@@ -46,6 +44,13 @@ function isProjectOwned(node: TSESTree.ClassDeclaration): boolean {
 	});
 }
 
+/**
+ * Flags every project-owned entity so that the author must make an explicit
+ * ownership-transfer decision. To acknowledge, handle the entity in
+ * `OwnershipTransferService`, list it in the ownership-transfer manifest, and
+ * suppress the report with a standard
+ * `eslint-disable-next-line ... -- <decision>` comment stating the decision.
+ */
 export const ProjectOwnedEntityTransferRule = ESLintUtils.RuleCreator.withoutDocs({
 	meta: {
 		type: 'problem',
@@ -55,7 +60,7 @@ export const ProjectOwnedEntityTransferRule = ESLintUtils.RuleCreator.withoutDoc
 		},
 		messages: {
 			missingTransferDecision:
-				'Entity `{{ name }}` belongs to a Project, but this file does not record an ownership-transfer decision. Handle the entity in `OwnershipTransferService.transferAllResources()` and list it in `packages/cli/src/services/ownership-transfer.manifest.ts`, then document the decision here with a `// @ownershipTransfer covered — …` or `// @ownershipTransfer excluded — <reason>` comment.',
+				'Entity `{{ name }}` belongs to a Project. Decide how it is handled when a project’s resources are transferred: handle it in `OwnershipTransferService.transferAllResources()` and list it in `packages/cli/src/services/ownership-transfer.manifest.ts`, then record the decision with an `// eslint-disable-next-line n8n-local-rules/project-owned-entity-transfer -- <covered or excluded: reason>` comment on the class.',
 		},
 		schema: [],
 	},
@@ -65,11 +70,6 @@ export const ProjectOwnedEntityTransferRule = ESLintUtils.RuleCreator.withoutDoc
 			ClassDeclaration(node) {
 				if (!isEntityClass(node) || !isProjectOwned(node)) return;
 				if (node.id?.name === 'Project') return;
-
-				const hasMarker = context.sourceCode
-					.getAllComments()
-					.some((comment) => comment.value.includes(MARKER));
-				if (hasMarker) return;
 
 				context.report({
 					node: node.id ?? node,

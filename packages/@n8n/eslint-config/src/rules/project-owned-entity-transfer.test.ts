@@ -3,37 +3,19 @@ import { ProjectOwnedEntityTransferRule } from './project-owned-entity-transfer.
 
 const ruleTester = new RuleTester();
 
+// NOTE: acknowledging a decision is done with a standard
+// `eslint-disable-next-line n8n-local-rules/project-owned-entity-transfer -- <decision>`
+// comment on the class line. RuleTester does not process disable directives,
+// so the valid cases below only cover classes the rule must not flag at all.
 ruleTester.run('project-owned-entity-transfer', ProjectOwnedEntityTransferRule, {
 	valid: [
-		// Entity without any Project reference needs no marker
+		// Entity without any Project reference needs no decision
 		{
 			code: `
 				@Entity()
 				export class Webhook {
 					@Column()
 					method: string;
-				}
-			`,
-		},
-		// Project-owned entity with a marker comment is fine
-		{
-			code: `
-				// @ownershipTransfer covered — transferred by OwnershipTransferService
-				@Entity()
-				export class SharedWorkflow {
-					@Column()
-					projectId: string;
-				}
-			`,
-		},
-		// Marker also satisfies relation-based ownership, string form included
-		{
-			code: `
-				// @ownershipTransfer excluded — dropped via FK cascade, personal projects have none
-				@Entity()
-				export class Variables {
-					@ManyToOne('Project', { nullable: true })
-					project: Project | null;
 				}
 			`,
 		},
@@ -57,7 +39,7 @@ ruleTester.run('project-owned-entity-transfer', ProjectOwnedEntityTransferRule, 
 		},
 	],
 	invalid: [
-		// projectId column without a marker
+		// projectId column
 		{
 			code: `
 				@Entity()
@@ -68,7 +50,7 @@ ruleTester.run('project-owned-entity-transfer', ProjectOwnedEntityTransferRule, 
 			`,
 			errors: [{ messageId: 'missingTransferDecision' }],
 		},
-		// arrow-function relation to Project without a marker
+		// arrow-function relation to Project
 		{
 			code: `
 				@Entity()
@@ -79,13 +61,24 @@ ruleTester.run('project-owned-entity-transfer', ProjectOwnedEntityTransferRule, 
 			`,
 			errors: [{ messageId: 'missingTransferDecision' }],
 		},
-		// string-form relation to Project without a marker
+		// string-form relation to Project
 		{
 			code: `
 				@Entity()
 				export class Variables {
 					@ManyToOne('Project', { nullable: true })
 					project: Project | null;
+				}
+			`,
+			errors: [{ messageId: 'missingTransferDecision' }],
+		},
+		// many-to-many relation to Project
+		{
+			code: `
+				@Entity()
+				export class RoleMappingRule {
+					@ManyToMany('Project', (project: Project) => project.roleMappingRules)
+					projects: Project[];
 				}
 			`,
 			errors: [{ messageId: 'missingTransferDecision' }],

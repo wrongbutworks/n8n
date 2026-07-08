@@ -5,8 +5,8 @@ import { WithTimestamps } from './abstract-entity';
 import { Project } from './project';
 import { WorkflowEntity } from './workflow-entity';
 
-// @ownershipTransfer covered — transferred by OwnershipTransferService.transferAllResources()
 @Entity()
+// eslint-disable-next-line n8n-local-rules/project-owned-entity-transfer -- covered: transferred by OwnershipTransferService.transferAllResources()
 export class SharedWorkflow extends WithTimestamps {
 	@Column({ type: 'varchar' })
 	role: WorkflowSharingRole;
