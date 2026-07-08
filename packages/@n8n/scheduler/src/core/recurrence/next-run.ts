@@ -21,21 +21,22 @@ import { validateSchedule } from './validate';
  */
 const MAX_RECURRENCE_CANDIDATES = 10_000;
 
+type CronCursor = ReturnType<typeof CronExpressionParser.parse>;
+
 /**
- * Cron: next fire strictly after `after`, in the schedule's IANA timezone.
- * `cron-parser` advances from `currentDate` with strictly-after semantics and
- * resolves DST via luxon. The timezone must already be resolved to a concrete
- * zone (a `null` instance default is rejected upstream). Wall-clock: a
- * nonexistent local time (spring-forward) shifts forward; a repeated local time
- * (fall-back) fires once.
+ * A cron cursor over the fires strictly after `after`, in the schedule's IANA
+ * timezone. `cron-parser` advances from `currentDate` with strictly-after
+ * semantics and resolves DST via luxon. The timezone must already be resolved
+ * to a concrete zone (a `null` instance default is rejected upstream).
+ * Wall-clock: a nonexistent local time (spring-forward) shifts forward; a
+ * repeated local time (fall-back) fires once.
  */
-function cronNextRun(cronExpression: CronExpression, after: Date, timezone: string): Date {
+function parseCron(cronExpression: CronExpression, after: Date, timezone: string): CronCursor {
 	try {
-		const it = CronExpressionParser.parse(cronExpression, {
+		return CronExpressionParser.parse(cronExpression, {
 			currentDate: after,
 			tz: timezone,
 		});
-		return it.next().toDate();
 	} catch (error) {
 		throw new InvalidScheduleError(
 			`Failed to evaluate cron expression ${JSON.stringify(cronExpression)} in timezone ${JSON.stringify(timezone)}: ${(error as Error).message}`,
@@ -43,34 +44,27 @@ function cronNextRun(cronExpression: CronExpression, after: Date, timezone: stri
 	}
 }
 
+/** Cron: next fire strictly after `after`. */
+function cronNextRun(cronExpression: CronExpression, after: Date, timezone: string): Date {
+	return parseCron(cronExpression, after, timezone).next().toDate();
+}
+
 /**
- * Recurring cron: the first anchor fire after `after` that the every-Nth-period
- * gate keeps. `after` must be the previous fire — the gate measures elapsed
- * periods from it, which is what makes the cadence replayable from storage
- * alone. Off-cadence anchor fires are skipped entirely (never materialized),
- * under a scan bound that turns a pathological anchor/gate pairing into an
- * error instead of an unbounded loop.
+ * The next anchor fire the every-Nth-period gate keeps, scanning `cursor`
+ * forward from wherever it sits. `previousFire` is what the gate measures
+ * elapsed periods against; off-cadence fires are consumed and skipped. Bounded
+ * by a scan cap that turns a pathological anchor/gate pairing into an error
+ * instead of an unbounded loop.
  */
-function recurringCronNextRun(
+function advanceToOnCadence(
+	cursor: CronCursor,
 	schedule: RecurringCronSchedule,
-	after: Date,
+	previousFire: Date,
 	timezone: string,
 ): Date {
-	let it;
-	try {
-		it = CronExpressionParser.parse(schedule.cronExpression, {
-			currentDate: after,
-			tz: timezone,
-		});
-	} catch (error) {
-		throw new InvalidScheduleError(
-			`Failed to evaluate cron expression ${JSON.stringify(schedule.cronExpression)} in timezone ${JSON.stringify(timezone)}: ${(error as Error).message}`,
-		);
-	}
-
 	for (let scanned = 0; scanned < MAX_RECURRENCE_CANDIDATES; scanned++) {
-		const candidate = it.next().toDate();
-		if (isOnCadence(after, candidate, schedule, timezone)) {
+		const candidate = cursor.next().toDate();
+		if (isOnCadence(previousFire, candidate, schedule, timezone)) {
 			return candidate;
 		}
 	}
@@ -78,6 +72,21 @@ function recurringCronNextRun(
 	throw new InvalidScheduleError(
 		`No fire of cron expression ${JSON.stringify(schedule.cronExpression)} lands on the every-${schedule.recurrenceSize}-${schedule.recurrenceUnit} cadence within ${MAX_RECURRENCE_CANDIDATES} candidates`,
 	);
+}
+
+/**
+ * Recurring cron: the first anchor fire after `after` that the every-Nth-period
+ * gate keeps. `after` must be the previous fire — the gate measures elapsed
+ * periods from it, which is what makes the cadence replayable from storage
+ * alone. Off-cadence anchor fires are skipped entirely (never materialized).
+ */
+function recurringCronNextRun(
+	schedule: RecurringCronSchedule,
+	after: Date,
+	timezone: string,
+): Date {
+	const cursor = parseCron(schedule.cronExpression, after, timezone);
+	return advanceToOnCadence(cursor, schedule, after, timezone);
 }
 
 /**
@@ -154,4 +163,60 @@ export function computeFirstRunAt(schedule: Schedule, from: Date): Date | null {
 		return cronNextRun(schedule.cronExpression, from, resolvedTimezone(schedule));
 	}
 	return computeNextRunAt(schedule, from);
+}
+
+/**
+ * The successive occurrences of a schedule for one materialization walk, oldest
+ * first, beginning with `first` (a job's current `next_run_at`: an already-due
+ * fire) and continuing indefinitely until the schedule is exhausted. Validates
+ * the schedule and parses any cron expression exactly once, then advances a
+ * single cursor, so walking a wide window costs no repeated parsing — unlike
+ * calling {@link computeNextRunAt} in a loop.
+ *
+ * Like {@link computeNextRunAt}, `first` for a `recurring_cron` must be a real
+ * fire, not an arbitrary lower bound: the gate measures elapsed periods from
+ * the previously yielded fire, so the sequence is only correct when seeded from
+ * one (via {@link computeFirstRunAt}).
+ */
+export function* occurrencesFrom(schedule: Schedule, first: Date): Generator<Date> {
+	validateSchedule(schedule);
+
+	switch (schedule.kind) {
+		case 'cron': {
+			const timezone = resolvedTimezone(schedule);
+			const cursor = parseCron(schedule.cronExpression, first, timezone);
+			yield first;
+			for (;;) {
+				yield cursor.next().toDate();
+			}
+		}
+		case 'recurring_cron': {
+			const timezone = resolvedTimezone(schedule);
+			const cursor = parseCron(schedule.cronExpression, first, timezone);
+			let previous = first;
+			yield previous;
+			for (;;) {
+				previous = advanceToOnCadence(cursor, schedule, previous, timezone);
+				yield previous;
+			}
+		}
+		case 'interval': {
+			let previous = first;
+			yield previous;
+			for (;;) {
+				previous = intervalNextRun(schedule, previous);
+				yield previous;
+			}
+		}
+		case 'one_off':
+			// A one-off fires only at `first` (its `fireAt`); nothing follows.
+			yield first;
+			return;
+		default: {
+			const exhaustive: never = schedule;
+			throw new InvalidScheduleError(
+				`Unknown schedule kind: ${JSON.stringify((exhaustive as Schedule).kind)}`,
+			);
+		}
+	}
 }

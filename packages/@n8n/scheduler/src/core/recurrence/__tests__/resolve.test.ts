@@ -148,4 +148,9 @@ describe('resolveSchedule', () => {
 			resolveSchedule(makeJob({ kind: 'one_off', intervalSeconds: null }), DEFAULT_TZ),
 		).toThrow(CorruptStorageRowError);
 	});
+
+	it('throws on a kind outside the enum (a corrupt row)', () => {
+		const corrupt = makeJob({ kind: 'weekly' as ScheduledJob['kind'] });
+		expect(() => resolveSchedule(corrupt, DEFAULT_TZ)).toThrow(CorruptStorageRowError);
+	});
 });

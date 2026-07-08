@@ -35,6 +35,12 @@ export function resolveSchedule(job: ScheduledJob, defaultTimezone: string): Sch
 			return { kind: 'interval', intervalSeconds: required(job, 'intervalSeconds') };
 		case 'one_off':
 			return { kind: 'one_off', fireAt: required(job, 'fireAt') };
+		default:
+			// A kind outside the enum the `kind` CHECK constraint allows: a corrupt
+			// or hand-edited row. Defer it like any other unreadable row.
+			throw new CorruptStorageRowError(
+				`scheduled_job ${job.id} has unknown kind '${String(job.kind)}'`,
+			);
 	}
 }
 
