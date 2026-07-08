@@ -53,6 +53,11 @@
 			"name": "InstanceAiThread",
 			"path": "packages/cli/src/modules/instance-ai/entities/instance-ai-thread.entity.ts",
 			"reason": "AI assistant conversation history; personal to the deleted user."
+		},
+		{
+			"name": "InsightsMetadata",
+			"path": "packages/cli/src/modules/insights/database/entities/insights-metadata.ts",
+			"reason": "Denormalized analytics snapshot; historical insights keep the original project reference by design."
 		}
 	]
 }

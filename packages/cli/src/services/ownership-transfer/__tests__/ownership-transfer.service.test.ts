@@ -27,8 +27,8 @@ describe('OwnershipTransferService', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		// eslint-disable-next-line @typescript-eslint/no-unsafe-return
-		manager.transaction.mockImplementation(async (cb: unknown) =>
-			(cb as (trx: EntityManager) => Promise<unknown>)(trx),
+		manager.transaction.mockImplementation(
+			async (cb: unknown) => await (cb as (trx: EntityManager) => Promise<unknown>)(trx),
 		);
 		workflowService.transferAll.mockResolvedValue([]);
 

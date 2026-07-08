@@ -13,9 +13,18 @@ import {
 const REPO_ROOT = path.resolve(__dirname, '../../../../../..');
 
 function findEntityFiles(dir: string): string[] {
+	// Detect entity files by content, not filename convention — some modules
+	// declare entities in files without the `.entity.ts` suffix (e.g. insights).
 	return readdirSync(dir, { withFileTypes: true, recursive: true })
-		.filter((entry) => entry.isFile() && entry.name.endsWith('.entity.ts'))
-		.map((entry) => path.join(entry.parentPath, entry.name));
+		.filter(
+			(entry) =>
+				entry.isFile() &&
+				entry.name.endsWith('.ts') &&
+				!entry.name.endsWith('.test.ts') &&
+				!entry.parentPath.includes('__tests__'),
+		)
+		.map((entry) => path.join(entry.parentPath, entry.name))
+		.filter((file) => readFileSync(file, 'utf8').includes('@Entity('));
 }
 
 /**
