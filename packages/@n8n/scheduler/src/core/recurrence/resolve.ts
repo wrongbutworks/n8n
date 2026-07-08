@@ -23,6 +23,14 @@ export function resolveSchedule(job: ScheduledJob, defaultTimezone: string): Sch
 				cronExpression: required(job, 'cronExpression') as CronExpression,
 				timezone: job.timezone ?? defaultTimezone,
 			};
+		case 'recurring_cron':
+			return {
+				kind: 'recurring_cron',
+				cronExpression: required(job, 'cronExpression') as CronExpression,
+				timezone: job.timezone ?? defaultTimezone,
+				recurrenceUnit: required(job, 'recurrenceUnit'),
+				recurrenceSize: required(job, 'recurrenceSize'),
+			};
 		case 'interval':
 			return { kind: 'interval', intervalSeconds: required(job, 'intervalSeconds') };
 		case 'one_off':
