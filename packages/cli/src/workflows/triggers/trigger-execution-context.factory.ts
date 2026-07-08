@@ -28,6 +28,7 @@ import { DuplicateExecutionError } from '@/errors/duplicate-execution.error';
 import { EventService } from '@/events/event.service';
 import { executeErrorWorkflow } from '@/execution-lifecycle/execute-error-workflow';
 import { ExecutionService } from '@/executions/execution.service';
+import { OwnershipService } from '@/services/ownership.service';
 import { WorkflowExecutionService } from '@/workflows/workflow-execution.service';
 import { WorkflowPublishedDataService } from '@/workflows/workflow-published-data.service';
 import { WorkflowStaticDataService } from '@/workflows/workflow-static-data.service';
@@ -62,6 +63,7 @@ export class TriggerExecutionContextFactory {
 		private readonly workflowExecutionService: WorkflowExecutionService,
 		private readonly storageConfig: StorageConfig,
 		private readonly workflowPublishedDataService: WorkflowPublishedDataService,
+		private readonly ownershipService: OwnershipService,
 	) {
 		this.logger = this.logger.scoped(['workflow-activation']);
 	}
@@ -122,14 +124,17 @@ export class TriggerExecutionContextFactory {
 						throw error;
 					});
 
-				void executePromise.then((executionId) => {
+				void executePromise.then(async (executionId) => {
 					// `executionId` is undefined when the catch above swallowed a
 					// duplicate scheduled execution; nothing ran, so nothing to emit.
 					if (executionId === undefined) return;
+					const project = await this.ownershipService.getWorkflowProjectCached(workflowData.id);
 					this.eventService.emit('workflow-executed', {
 						workflowId: workflowData.id,
 						workflowName: workflowData.name,
 						executionId,
+						projectId: project.id,
+						projectName: project.name,
 						source: 'trigger',
 					});
 				});

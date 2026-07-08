@@ -310,6 +310,8 @@ export class WorkflowExecutionService {
 			workflowId: workflowData.id,
 			workflowName: workflowData.name,
 			executionId,
+			projectId: project.id,
+			projectName: project.name,
 			source: 'chat',
 		});
 
@@ -505,6 +507,8 @@ export class WorkflowExecutionService {
 				workflowId,
 				workflowName: workflowData.name,
 				executionId,
+				projectId: runningProject.id,
+				projectName: runningProject.name,
 				source: 'error',
 			});
 		} catch (error) {

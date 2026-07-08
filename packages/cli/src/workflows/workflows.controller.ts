@@ -62,6 +62,7 @@ import { listQueryMiddleware } from '@/middlewares';
 import { userHasScopes } from '@/permissions.ee/check-access';
 import * as ResponseHelper from '@/response-helper';
 import { NamingService } from '@/services/naming.service';
+import { OwnershipService } from '@/services/ownership.service';
 import { ProjectService } from '@/services/project.service.ee';
 import { UserManagementMailer } from '@/user-management/email';
 import * as utils from '@/utils';
@@ -91,6 +92,7 @@ export class WorkflowsController {
 		private readonly ssrfProtectionService: SsrfProtectionService,
 		private readonly outboundHttp: OutboundHttp,
 		private readonly workflowPublicationStatusService: WorkflowPublicationStatusService,
+		private readonly ownershipService: OwnershipService,
 	) {}
 
 	@Post('/')
@@ -523,6 +525,7 @@ export class WorkflowsController {
 		);
 
 		if ('executionId' in result) {
+			const project = await this.ownershipService.getWorkflowProjectCached(dbWorkflow.id);
 			this.eventService.emit('workflow-executed', {
 				user: {
 					id: req.user.id,
@@ -534,6 +537,8 @@ export class WorkflowsController {
 				workflowId: dbWorkflow.id,
 				workflowName: dbWorkflow.name,
 				executionId: result.executionId,
+				projectId: project.id,
+				projectName: project.name,
 				source: 'user-manual',
 			});
 		}

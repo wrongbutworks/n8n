@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import type { Logger } from '@n8n/backend-common';
-import type { WorkflowEntity } from '@n8n/db';
+import type { Project, WorkflowEntity } from '@n8n/db';
 import { createDeferredPromise } from '@n8n/utils/promise/deferred-promise';
 import type { ErrorReporter, StorageConfig } from 'n8n-core';
 import { sleep, UnexpectedError } from 'n8n-workflow';
@@ -23,6 +23,7 @@ import { DuplicateExecutionError } from '@/errors/duplicate-execution.error';
 import type { EventService } from '@/events/event.service';
 import { executeErrorWorkflow } from '@/execution-lifecycle/execute-error-workflow';
 import type { ExecutionService } from '@/executions/execution.service';
+import type { OwnershipService } from '@/services/ownership.service';
 import type { WorkflowExecutionService } from '@/workflows/workflow-execution.service';
 import type {
 	PublishedWorkflowDataForExecution,
@@ -45,6 +46,7 @@ describe('TriggerExecutionContextFactory', () => {
 	const activeExecutions = mock<ActiveExecutions>();
 	const workflowPublishedDataService = mock<WorkflowPublishedDataService>();
 	const storageConfig = mock<StorageConfig>({ modeTag: 'db' }) as unknown as StorageConfig;
+	const ownershipService = mock<OwnershipService>();
 
 	let factory: TriggerExecutionContextFactory;
 
@@ -53,6 +55,9 @@ describe('TriggerExecutionContextFactory', () => {
 		workflowStaticDataService.saveStaticData.mockResolvedValue(undefined);
 		workflowExecutionService.runWorkflow.mockResolvedValue('exec-123');
 		executionService.createErrorExecution.mockResolvedValue(undefined);
+		ownershipService.getWorkflowProjectCached.mockResolvedValue(
+			mock<Project>({ id: 'project-1', name: 'Test Project' }),
+		);
 
 		const scopedLogger = mock<Logger>();
 		const rootLogger = mock<Logger>({ scoped: vi.fn().mockReturnValue(scopedLogger) });
@@ -67,6 +72,7 @@ describe('TriggerExecutionContextFactory', () => {
 			workflowExecutionService,
 			storageConfig,
 			workflowPublishedDataService,
+			ownershipService,
 		);
 	});
 
@@ -108,6 +114,8 @@ describe('TriggerExecutionContextFactory', () => {
 					workflowId: workflowData.id,
 					workflowName: workflowData.name,
 					executionId: 'exec-123',
+					projectId: 'project-1',
+					projectName: 'Test Project',
 					source: 'trigger',
 				});
 			});

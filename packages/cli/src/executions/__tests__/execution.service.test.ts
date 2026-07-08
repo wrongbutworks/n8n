@@ -4,6 +4,7 @@ import type {
 	IExecutionDb,
 	IExecutionResponse,
 	ExecutionRepository,
+	Project,
 	User,
 	WorkflowHistoryRepository,
 } from '@n8n/db';
@@ -26,6 +27,7 @@ import type { ExecutionRequest } from '@/executions/execution.types';
 import type { ExecutionStopService } from '@/scaling/execution-stop.service';
 import { ScalingService } from '@/scaling/scaling.service';
 import type { Job } from '@/scaling/scaling.types';
+import type { OwnershipService } from '@/services/ownership.service';
 import type { WaitTracker } from '@/wait-tracker';
 import type { WorkflowRunner } from '@/workflow-runner';
 
@@ -40,6 +42,7 @@ describe('ExecutionService', () => {
 	const globalConfig = Container.get(GlobalConfig);
 	const executionRedactionServiceProxy = mock<ExecutionRedactionServiceProxy>();
 	const executionStopService = mock<ExecutionStopService>();
+	const ownershipService = mock<OwnershipService>();
 
 	const executionService = new ExecutionService(
 		globalConfig,
@@ -62,11 +65,15 @@ describe('ExecutionService', () => {
 		mock(),
 		executionRedactionServiceProxy,
 		executionStopService,
+		ownershipService,
 	);
 
 	beforeEach(() => {
 		globalConfig.executions.mode = 'regular';
 		vi.clearAllMocks();
+		ownershipService.getWorkflowProjectCached.mockResolvedValue(
+			mock<Project>({ id: 'project-1', name: 'Test Project' }),
+		);
 	});
 
 	describe('findOne', () => {
@@ -197,6 +204,7 @@ describe('ExecutionService', () => {
 				mock(),
 				localExecutionRedactionProxy,
 				executionStopService,
+				ownershipService,
 			);
 
 			const mockUser = mock<User>({ id: 'user-1' });
@@ -282,6 +290,7 @@ describe('ExecutionService', () => {
 				mock(),
 				redactionProxy,
 				mock(),
+				ownershipService,
 			);
 
 			workflowRunner.run.mockResolvedValue('retried-123');
